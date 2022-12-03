@@ -11,7 +11,7 @@ I found that the answers are most of the time quite relevant, just need some man
 3. Clearly separate each message so the AI understands the context properly
 4. Ask to complete my next answer
 
-As an example, this is what the prompt would look like ([PR link]()https://github.com/aws/aws-cdk/pull/23095):
+As an example, this is what the prompt would look like (PR: https://github.com/aws/aws-cdk/pull/23095):
 
 ```
 This is a conversation on GitHub. My username is "rigwild".
