@@ -8,8 +8,8 @@
 // @description Copy a GitHub conversation and ask OpenAI GPT-3 what to answer
 // @homepageURL https://github.com/rigwild/github-to-openai
 // @supportURL  https://github.com/rigwild/github-to-openai/issues
-// @updateURL   https://raw.githubusercontent.com/rigwild/github-to-openai/blob/main/github-to-openai.js
-// @downloadURL https://raw.githubusercontent.com/rigwild/github-to-openai/blob/main/github-to-openai.js
+// @updateURL   https://raw.githubusercontent.com/rigwild/github-to-openai/main/github-to-openai.js
+// @downloadURL https://raw.githubusercontent.com/rigwild/github-to-openai/main/github-to-openai.js
 // @grant       GM_xmlhttpRequest
 // @grant       GM_setClipboard
 // @grant       GM_getValue
@@ -27,6 +27,7 @@
 let OPEN_AI_API_KEY = ''
 
 const triggerElement = addTriggerLink()
+
 triggerElement.addEventListener('click', async e => {
   if (e.shiftKey) {
     await removeApiKey()
