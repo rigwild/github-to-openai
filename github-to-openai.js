@@ -3,9 +3,9 @@
 // @namespace   Violentmonkey Scripts
 // @match       https://github.com/*
 // @grant       none
-// @version     1.0
+// @version     1.1
 // @author      rigwild (https://github.com/rigwild/github-to-openai)
-// @description Copy a GitHub conversation and ask OpenAI GPT-3 what to answer
+// @description Copy a GitHub conversation and ask OpenAI ChatGPT what to answer
 // @homepageURL https://github.com/rigwild/github-to-openai
 // @supportURL  https://github.com/rigwild/github-to-openai/issues
 // @updateURL   https://raw.githubusercontent.com/rigwild/github-to-openai/main/github-to-openai.js
@@ -77,21 +77,18 @@ async function removeApiKey() {
 }
 
 async function getSuggestion() {
-  const myUsername = getGitHubUsername()
-  const prompt =
-    `This is a conversation on GitHub. My username is "${myUsername}".` +
-    `\n\n-----------\n\n` +
-    `${getConversation()}` +
-    `\n\n-----------\n\n` +
-    'Your goal is to answer to this conversation with an appropriate response.\n\n' +
-    `Response:\n\n@${myUsername}:\n`
+  const conversation = getConversation()
+
   setTriggerElementState('idle')
   try {
     // GM_notification('Asking OpenAI GPT-3 what to answer...', 'GitHub to OpenAI')
     setTriggerElementState('loading')
-    const openAiResponse = await askToGpt3(prompt)
-    console.log('[GitHub to OpenAI]', { ...openAiResponse, prompt })
-    GM_setClipboard(openAiResponse.choices[0].text)
+    // const openAiResponse = await askToGpt3(prompt)
+    // GM_setClipboard(openAiResponse.choices[0].text)
+    const openAiResponse = await askToChatGPT(conversation)
+    console.log('[GitHub to OpenAI]', { ...openAiResponse, conversation })
+    if ('error' in openAiResponse) throw new Error(openAiResponse.error.message)
+    GM_setClipboard(openAiResponse.choices[0].message.content)
     setTriggerElementState('success')
     // GM_notification('Suggested answer copied to clipboard!', 'GitHub to OpenAI')
   } catch (err) {
@@ -114,10 +111,10 @@ function getConversation() {
       const user = x.querySelector('.author')?.innerText.trim() || ''
       const date = x.querySelector('relative-time')?.title.trim() || ''
       const text = x.querySelector('.comment-body')?.innerText.trim() || ''
-      return `@${user} on [${date}]: "${text}"`
+      return `@${user} on [${date}]: """\n${text}\n"""`
     })
     .map(x => x.trim())
-    .join('\n\n---\n\n')
+    .join('\n\n==========\n\n')
 }
 
 function addTriggerLink() {
@@ -133,7 +130,7 @@ function addTriggerLink() {
 
   const a = document.createElement('a')
   // a.href = `#`
-  a.innerText = '👉 Ask OpenAI what to answer'
+  a.innerText = '👉 Ask ChatGPT to answer'
   a.style.color = '#adbac7'
   a.style.padding = '4px 8px'
   // a.style.background = 'linear-gradient(to right, #f857a6, #ff5858)'
@@ -188,7 +185,9 @@ function setVisible(element, isVisible) {
   element.style.display = isVisible ? 'block' : 'none'
 }
 
+/** @deprecated Not used anymore */
 async function askToGpt3(text) {
+  const myUsername = getGitHubUsername()
   const res = await GM_fetch('https://api.openai.com/v1/completions', {
     method: 'POST',
     headers: {
@@ -196,7 +195,14 @@ async function askToGpt3(text) {
       Authorization: `Bearer ${OPEN_AI_API_KEY}`,
     },
     body: JSON.stringify({
-      prompt: text,
+      prompt:
+        `This is a conversation on GitHub. My username is "${myUsername}".` +
+        'Your goal is to answer to this conversation with an appropriate response.\n\n' +
+        +`Conversation content:` +
+        `\n\n===============\n\n` +
+        text +
+        `\n\n===============\n\n` +
+        `Response:\n\n@${myUsername}:\n${text}`,
       model: 'text-davinci-003',
       max_tokens: 256,
       temperature: 0.5,
@@ -209,6 +215,53 @@ async function askToGpt3(text) {
     throw new Error(`${res.status} - ${res.statusText} - ${await res.json()}`)
   }
   return res.json()
+}
+
+async function askToChatGPT(text) {
+  const myUsername = getGitHubUsername()
+  const prompt = {
+    messages: [
+      {
+        role: 'system',
+        content: `You are an experienced GitHub user with the pseudo "${myUsername}", that is answering to a discussion, an issue, or a pull request - and try your best to give helpful and appropriate responses`,
+      },
+      {
+        role: 'user',
+        content:
+          `This is a conversation on GitHub. Your username is "${myUsername}".\n` +
+          `You are an experienced GitHub user that is answering to a discussion, an issue, or a pull request - and try your best to give helpful and appropriate responses.\n` +
+          `Please answer it by trying your best to be helpful.\n\n` +
+          `Additional instructions:\n` +
+          `- You are user "@${myUsername}", you must answer to others, not yourself!\n` +
+          `- Your responses must be positive\n` +
+          `- If you need to criticize or suggest something, you try to list multiple arguments in a coherent fashion, to be as constructive as possible\n` +
+          `- Try to not write too big paragraphs of text, instead you must add spacings or go to line or break line often to make your response easier to read\n` +
+          `- Take the global context but remember that you should probably give an answer related to the latest messages in the whole conversation\n` +
+          `- Your response must not contain anything other than the content of the answer itself\n\n` +
+          `Here is the conversation content that you must answer to:` +
+          `\n\n###############\n\n` +
+          text,
+      },
+    ],
+  }
+  const res = await GM_fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPEN_AI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      ...prompt,
+      model: 'gpt-3.5-turbo',
+      max_tokens: 256,
+      temperature: 0.5,
+    }),
+  })
+
+  if (res.status < 200 && res.status >= 300) {
+    throw new Error(`${res.status} - ${res.statusText} - ${await res.json()}`)
+  }
+  return { ...(await res.json()), prompt }
 }
 
 function GM_fetch(url, opt) {
