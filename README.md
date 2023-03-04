@@ -1,6 +1,6 @@
 # GitHub to OpenAI
 
-This is a Tampermonkey userscript that adds a button that will copy the content of a GitHub issue/discussion/PR and akt to OpenAI **ChatGPT** what should be answered.
+This is a Tampermonkey userscript that adds a button that will copy the content of a GitHub issue/discussion/PR and ask to OpenAI **ChatGPT** API what should be answered.
 
 I found that the answers are most of the time quite relevant, just need some manual adjustments to make it fully human-like 💥
 
@@ -8,10 +8,17 @@ I found that the answers are most of the time quite relevant, just need some man
 
 1. Extract the whole conversation, including the pseudos
 2. Indicate which pseudo is mine
-3. Clearly separate each message so the AI understands the context properly
-4. Ask to complete my next answer
+3. Give clear instructions to make the output more relevant to GitHub context
+4. Clearly separate each message so the AI understands the context properly
+5. Ask to complete my next answer
 
-As an example, this is what the prompt would look like (PR: https://github.com/aws/aws-cdk/pull/23095):
+## Prompt
+
+The prompt is currently the following:
+
+![Prompt screenshot, see below](./playground.webp)
+
+As an example, this is what the prompt would look like for [this pull request](https://github.com/aws/aws-cdk/pull/23095):
 
 ```
 "This is a conversation on GitHub. Your username is "rigwild".
